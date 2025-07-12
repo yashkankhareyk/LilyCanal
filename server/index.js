@@ -10,6 +10,12 @@ const Product = require('./models/Product');
 const connectDB = require('./config/db');
 connectDB();
 
+const BASE_URL = process.env.BASE_URL || 'https://ashwini-jadhav.onrender.com';
+
+// If Render (or any reverse‑proxy) terminates SSL, Express needs to trust the proxy
+app.set('trust proxy', true);
+
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -233,10 +239,13 @@ app.get('/api/products', async (req, res) => {
 app.post('/api/products', verifyToken, upload.single('image'), async (req, res) => {
   try {
     const { name, description, price, affiliateLink, brand } = req.body;
+    
     let imageUrl = '';
     if (req.file) {
-      imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      // ✅ Force full HTTPS URL using BASE_URL
+      imageUrl = `${BASE_URL}/uploads/${req.file.filename}`;
     } else if (req.body.imageUrl) {
+      // Fallback if already provided (e.g., from Cloudinary or elsewhere)
       imageUrl = req.body.imageUrl;
     }
 
@@ -257,6 +266,7 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
   }
 });
 
+
 // Update a product
 app.put('/api/products/:id', verifyToken, upload.single('image'), async (req, res) => {
   try {
@@ -265,7 +275,8 @@ app.put('/api/products/:id', verifyToken, upload.single('image'), async (req, re
 
     let imageUrl;
     if (req.file) {
-      imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+      // ✅ Use BASE_URL instead of req.protocol
+      imageUrl = `${BASE_URL}/uploads/${req.file.filename}`;
     } else if (req.body.imageUrl) {
       imageUrl = req.body.imageUrl;
     }
@@ -289,6 +300,7 @@ app.put('/api/products/:id', verifyToken, upload.single('image'), async (req, re
   }
 });
 
+
 // Soft delete a product (set isActive to false)
 app.delete('/api/products/:id', verifyToken, async (req, res) => {
   try {
@@ -303,6 +315,7 @@ app.delete('/api/products/:id', verifyToken, async (req, res) => {
   }
 });
 
+
 // Image upload route
 app.post('/api/upload', verifyToken, upload.single('image'), (req, res) => {
   try {
@@ -310,13 +323,15 @@ app.post('/api/upload', verifyToken, upload.single('image'), (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const imageUrl = `${req.protocol}://${req.get('host')}/${req.file.filename}`;
+    // ✅ Use BASE_URL instead of protocol logic
+    const imageUrl = `${BASE_URL}/uploads/${req.file.filename}`;
     res.json({ imageUrl });
   } catch (error) {
     console.error('Error uploading image:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // Start server
 const startServer = async () => {
