@@ -1,18 +1,13 @@
-// config/db.js
-const mongoose = require('mongoose');
-require('dotenv').config();
+import mongoose from 'mongoose';
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb+srv://ashwinijadhav7083:lilycanal123@cluster0.adewnck.mongodb.net/lilycanal', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('✅ MongoDB connected');
+    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
+    console.error(`Error: ${error.message}`);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

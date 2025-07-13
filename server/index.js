@@ -1,19 +1,22 @@
-// server/index.js
-const express = require('express');
-const cors = require('cors');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const multer = require('multer');
-const path = require('path');
-const dotenv = require('dotenv');
+import express from 'express';
+import cors from 'cors';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 dotenv.config();
 
-const cloudinary = require('../config/cloudinary');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const connectDB = require('../config/db');
-const Product = require('./models/Product');
-const Admin = require('./models/Admin');
+// Create __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+import cloudinary from './config/cloudinary.js';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import connectDB from './config/db.js';
+import Product from './models/Product.js';
+import Admin from './models/Admin.js';
 // Connect to MongoDB
 connectDB();
 
@@ -24,7 +27,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://your-vercel-deployment-url.vercel.app'
+    'https://lily-canal-yashkankhareyks-projects.vercel.app/'
   ],
   credentials: true,
 }));
