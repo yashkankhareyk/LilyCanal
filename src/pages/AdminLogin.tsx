@@ -28,11 +28,7 @@ const AdminLogin: React.FC = () => {
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
-      // For demo purposes, allow login with default credentials
-      if (email === 'admin@lilycanal.com' && password === 'admin123') {
-        localStorage.setItem('adminToken', 'demo-token');
-        navigate('/admin/dashboard');
-      }
+      
     } finally {
       setLoading(false);
     }
@@ -109,12 +105,6 @@ const AdminLogin: React.FC = () => {
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>Demo credentials:</p>
-          <p>Email: admin@lilycanal.com</p>
-          <p>Password: admin123</p>
-        </div>
       </div>
     </div>
   );
