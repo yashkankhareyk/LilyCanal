@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
@@ -53,38 +52,48 @@ const allowedOrigins = [
   'https://lilycanal.vercel.app'
 ];
 
+// 1. CORS MIDDLEWARE - MUST BE FIRST!
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 // Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 100,
+  message: 'Too many requests from this IP, please try again later'
 });
 
-// Middleware
+// Security Middleware
 app.use(limiter);
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  hsts: {
+    maxAge: 63072000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
 app.enable('trust proxy');
-app.use(express.json());
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`⚠️  Blocked CORS request from: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.ip} ${req.method} ${req.path} [Origin: ${req.headers.origin}]`);
   next();
 });
 
@@ -156,7 +165,17 @@ app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
+// Test endpoint
+app.get('/test-cors', (req, res) => {
+  res.json({ 
+    message: 'CORS test successful!', 
+    origin: req.headers.origin,
+    headers: req.headers
   });
 });
 
@@ -164,6 +183,10 @@ app.get('/health', (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     const admin = await Admin.findOne({ email });
     if (!admin) return res.status(401).json({ message: 'Invalid credentials' });
 
@@ -176,7 +199,11 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '24h' }
     );
     
-    res.json({ token, message: 'Login successful' });
+    res.json({ 
+      token, 
+      message: 'Login successful',
+      admin: { email: admin.email }
+    });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -186,7 +213,9 @@ app.post('/api/auth/login', async (req, res) => {
 // Product routes
 app.get('/api/products', async (req, res) => {
   try {
-    const products = await Product.find({ isActive: true }).sort({ createdAt: -1 });
+    const products = await Product.find({ isActive: true })
+      .sort({ createdAt: -1 })
+      .select('-__v');
     res.json(products);
   } catch (err) {
     console.error('Error fetching products:', err);
@@ -200,9 +229,11 @@ app.get('/api/products', async (req, res) => {
 app.post('/api/products', verifyToken, upload.single('image'), async (req, res) => {
   try {
     const { name, description, price, affiliateLink, brand } = req.body;
-    const imageUrl = req.file?.path || req.body.imageUrl;
-    const cloudinaryId = req.file?.filename || '';
+    if (!name || !price) {
+      return res.status(400).json({ message: 'Name and price are required' });
+    }
 
+    const imageUrl = req.file?.path || req.body.imageUrl;
     if (!imageUrl) {
       return res.status(400).json({ message: 'Image is required' });
     }
@@ -212,7 +243,7 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
       description,
       price,
       imageUrl,
-      cloudinaryId,
+      cloudinaryId: req.file?.filename || '',
       affiliateLink,
       brand
     });
@@ -221,7 +252,10 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
     res.status(201).json(product);
   } catch (err) {
     console.error('Error creating product:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: err.message
+    });
   }
 });
 
@@ -236,6 +270,7 @@ app.put('/api/products/:id', verifyToken, upload.single('image'), async (req, re
       price,
       affiliateLink,
       brand,
+      updatedAt: new Date()
     };
 
     if (req.file) {
@@ -254,7 +289,10 @@ app.put('/api/products/:id', verifyToken, upload.single('image'), async (req, re
     res.json(product);
   } catch (err) {
     console.error('Error updating product:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: err.message
+    });
   }
 });
 
@@ -271,7 +309,10 @@ app.delete('/api/products/:id', verifyToken, async (req, res) => {
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
     console.error('Error deleting product:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: err.message
+    });
   }
 });
 
@@ -294,16 +335,38 @@ app.post('/api/upload', verifyToken, upload.single('image'), (req, res) => {
   }
 });
 
-// Handle preflight requests
-app.options('*', cors());
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Endpoint not found' });
+});
+
+// Error Handler
+app.use((err, req, res, next) => {
+  console.error('⚠️ Server error:', err);
+  res.status(500).json({ 
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 // Start server
 const startServer = async () => {
   try {
     await createDefaultAdmin();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🛡️  CORS allowed for origins: ${allowedOrigins.join(', ')}`);
+      console.log(`🔍 Test CORS: https://lilycanal.onrender.com/test-cors`);
+      console.log(`🩺 Health check: https://lilycanal.onrender.com/health`);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received. Shutting down gracefully...');
+      server.close(() => {
+        console.log('Server terminated');
+        process.exit(0);
+      });
     });
   } catch (error) {
     console.error('💥 Failed to start server:', error);
