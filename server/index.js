@@ -1,11 +1,13 @@
 import express from 'express';
 import cors from 'cors';
+import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import mongoose from 'mongoose';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -14,7 +16,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Import configurations and models
+// Import configurations
 import cloudinary from './config/cloudinary.js';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import connectDB from './config/db.js';
@@ -23,18 +25,17 @@ import Admin from './models/Admin.js';
 
 // Validate environment variables
 const requiredEnvVars = [
-  'MONGODB_URI',
-  'JWT_SECRET',
-  'CLOUDINARY_CLOUD_NAME',
-  'CLOUDINARY_API_KEY',
-  'CLOUDINARY_API_SECRET',
-  'DEFAULT_ADMIN_EMAIL',
-  'DEFAULT_ADMIN_PASSWORD'
+  'MONGODB_URI', 'JWT_SECRET', 'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+  'DEFAULT_ADMIN_EMAIL', 'DEFAULT_ADMIN_PASSWORD'
 ];
 
 requiredEnvVars.forEach(env => {
   if (!process.env[env]) {
     console.error(`❌ Missing required environment variable: ${env}`);
+    process.exit(1);
+  } else if (env === 'JWT_SECRET' && process.env[env] === 'your-secret-key') {
+    console.error(`❌ Critical: Change default JWT_SECRET immediately!`);
     process.exit(1);
   }
 });
@@ -48,10 +49,27 @@ const PORT = process.env.PORT || 5000;
 // CORS Configuration
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://lily-canal.vercel.app',
   'https://lily-canal-git-main-yashkankhareyks-projects.vercel.app',
-  'https://lily-canal-yashkankhareyks-projects.vercel.app',
-  'https://lilycanal.vercel.app'
+  'https://lily-canal-hv1bp68p6-yashkankhareyks-projects.vercel.app',
+  'https://lily-canal-yashkankhareyks-projects.vercel.app'
 ];
+
+// 1. CORS Middleware - MUST BE FIRST!
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -59,107 +77,36 @@ const limiter = rateLimit({
   max: 100
 });
 
-// Middleware
+// Security Middleware
 app.use(limiter);
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(helmet());
 app.enable('trust proxy');
 app.use(express.json());
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`⚠️  Blocked CORS request from: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
 // Request logging
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} [${req.ip}]`);
   next();
 });
 
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Cloudinary configuration
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'products',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, crop: 'limit', quality: 'auto' }],
-  },
-});
-
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed!'), false);
-    }
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 1
-  }
-});
-
-// JWT Auth Middleware
-const verifyToken = (req, res, next) => {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ message: 'No token provided' });
-  
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.admin = decoded;
-    next();
-  } catch (err) {
-    console.error('JWT verification error:', err);
-    res.status(401).json({ message: 'Invalid token' });
-  }
-};
-
-// Create Default Admin
-const createDefaultAdmin = async () => {
-  try {
-    const email = process.env.DEFAULT_ADMIN_EMAIL;
-    const password = process.env.DEFAULT_ADMIN_PASSWORD;
-
-    const exists = await Admin.findOne({ email });
-    if (!exists) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      await Admin.create({ email, password: hashedPassword });
-      console.log('✅ Default admin created');
-    }
-  } catch (err) {
-    console.error('❌ Failed to create default admin:', err);
-    process.exit(1);
-  }
-};
-
-// Routes
-
-// Health check endpoint
+// Health check endpoint (MUST BE BEFORE OTHER ROUTES)
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
+// Test endpoint
+app.get('/test-cors', (req, res) => {
+  res.json({ 
+    message: 'CORS test successful!', 
+    origin: req.headers.origin,
+    headers: req.headers
+  });
+});
 // Auth routes
 app.post('/api/auth/login', async (req, res) => {
   try {
