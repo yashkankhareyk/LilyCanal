@@ -1,14 +1,16 @@
+// models/Product.js
 import mongoose from 'mongoose';
 
 const productSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: String,
   description: String,
-  price: String,
+  price: Number,
   imageUrl: String,
-  cloudinaryId: String, 
+  cloudinaryId: String,
   affiliateLink: String,
   brand: String,
-  isActive: { type: Boolean, default: true },
-}, { timestamps: true });
+  isActive: { type: Boolean, default: true }
+});
 
+// Change to default export
 export default mongoose.model('Product', productSchema);
