@@ -8,9 +8,9 @@ const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config();
 
-const cloudinary = require('./config/cloudinary');
+const cloudinary = require('../config/cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const connectDB = require('./config/db');
+const connectDB = require('../config/db');
 const Product = require('./models/Product');
 const Admin = require('./models/Admin');
 
@@ -29,7 +29,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Cloudinary storage config
 const storage = new CloudinaryStorage({

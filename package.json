@@ -8,8 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "server": "cd server && npm run dev",
-    "install-server": "cd server && npm install"
+    "start": "node server/index.js",
+    "server": "node server/index.js",
+    "install-server": "npm install"
   },
   "dependencies": {
     "axios": "^1.6.0",
