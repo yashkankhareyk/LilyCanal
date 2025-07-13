@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import path from 'path';
+import helmet from 'helmet';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -27,12 +28,18 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://lily-canal-yashkankhareyks-projects.vercel.app/'
+    'https://lily-canal-yashkankhareyks-projects.vercel.app',
+    'https://lilycanal.vercel.app'
   ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use(helmet());
+app.enable('trust proxy');
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Cloudinary storage config
 const storage = new CloudinaryStorage({
