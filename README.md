@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # lilycanal.com - Beauty Affiliate Product Website
 
 A fully functional beauty affiliate product website built with React.js and Node.js. Features a beautiful, responsive design with admin panel for product management.
@@ -39,3 +40,6 @@ This project is licensed under the MIT License.
 =======
 # Ashwini-jadhav
 >>>>>>> 530e643813d5f5f22da4b7a1328673b6091eef71
+=======
+# LilyCanal
+>>>>>>> 8484cc1d87a106f73d97622004cffc2afef56056
