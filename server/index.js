@@ -50,10 +50,12 @@ const allowedOrigins = [
   'https://lily-canal-yashkankhareyks-projects.vercel.app'
 ];
 
+app.set('trust proxy', 1);
 // Security Middleware
 app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 
 // CORS Middleware - MUST be after helmet but before routes
 app.use((req, res, next) => {
@@ -73,9 +75,10 @@ app.use((req, res, next) => {
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later'
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests from this IP, please try again later',
+  validate: { trustProxy: true } // 👈 Add this option
 });
 app.use(limiter);
 
