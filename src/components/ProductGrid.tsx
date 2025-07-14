@@ -44,11 +44,7 @@ const ProductGrid: React.FC = () => {
   };
 
   const handleFilterAndSort = () => {
-    if (!Array.isArray(products)) {
-      setFilteredProducts([]);
-      return;
-    }
-
+    
     let updatedProducts = [...products];
 
     // Filter
@@ -69,8 +65,9 @@ const ProductGrid: React.FC = () => {
   const extractPrice = (price: unknown): number => {
     if (typeof price === 'number') return price;
     if (typeof price === 'string') {
-      const num = price.replace(/[^\d]/g, '');
-      return num ? parseInt(num, 10) : 0;
+    // Remove all non-digit characters including currency symbols and commas
+      const num = price.replace(/[^\d.]/g, '');
+      return num ? parseFloat(num) : 0;
     }
     console.warn('Unexpected price type in extractPrice:', price);
     return 0;
