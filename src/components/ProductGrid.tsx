@@ -44,7 +44,6 @@ const ProductGrid: React.FC = () => {
   };
 
   const handleFilterAndSort = () => {
-    // Ensure products is an array before proceeding
     if (!Array.isArray(products)) {
       setFilteredProducts([]);
       return;
@@ -52,29 +51,30 @@ const ProductGrid: React.FC = () => {
 
     let updatedProducts = [...products];
 
-    // Filter by brand
+    // Filter
     if (brandFilter !== 'all') {
       updatedProducts = updatedProducts.filter((p) => p.brand === brandFilter);
     }
 
     // Sort
     if (sortOption === 'priceLowHigh') {
-      updatedProducts.sort((a, b) =>
-        extractPrice(a.price) - extractPrice(b.price)
-      );
+      updatedProducts.sort((a, b) => extractPrice(a.price) - extractPrice(b.price));
     } else if (sortOption === 'priceHighLow') {
-      updatedProducts.sort((a, b) =>
-        extractPrice(b.price) - extractPrice(a.price)
-      );
+      updatedProducts.sort((a, b) => extractPrice(b.price) - extractPrice(a.price));
     }
 
     setFilteredProducts(updatedProducts);
   };
 
-  const extractPrice = (price: string): number => {
-    return parseInt(price.replace(/[^0-9]/g, ''), 10);
+  const extractPrice = (price: string | number | undefined): number => {
+    if (typeof price === 'number') return price;
+    if (typeof price === 'string') {
+      const numeric = price.replace(/[^\d]/g, '');
+      return numeric ? parseInt(numeric, 10) : 0;
+    }
+    return 0;
   };
-
+  
   const mockProducts: Product[] = [
     {
       _id: '1',

@@ -240,7 +240,44 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
   }
 });
 
-// ... [Other product routes remain unchanged] ...
+app.delete('/api/products/:id', verifyToken, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    if (product.cloudinaryId) {
+      await cloudinary.uploader.destroy(product.cloudinaryId);
+    }
+
+    await Product.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Product deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting product:', err);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: err.message
+    });
+  }
+});
+
+// File upload route
+app.post('/api/upload', verifyToken, upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+    res.json({ 
+      imageUrl: req.file.path, 
+      cloudinaryId: req.file.filename 
+    });
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error.message
+    });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
