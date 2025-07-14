@@ -265,6 +265,52 @@ app.delete('/api/products/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Update product
+app.put('/api/products/:id', verifyToken, upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, affiliateLink, brand, price: rawPrice } = req.body;
+    if (!name || !rawPrice) {
+      return res.status(400).json({ message: 'Name and price are required' });
+    }
+
+    // Parse price as number
+    const price = typeof rawPrice === 'number'
+      ? rawPrice
+      : Number(String(rawPrice).replace(/[^\d.]/g, ''));
+
+    const updateData = {
+      name,
+      description,
+      price,
+      affiliateLink,
+      brand,
+    };
+
+    // Handle image update
+    if (req.file) {
+      updateData.imageUrl = req.file.path;
+      updateData.cloudinaryId = req.file.filename;
+    } else if (req.body.imageUrl) {
+      updateData.imageUrl = req.body.imageUrl;
+    }
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.json(updatedProduct);
+  } catch (err) {
+    console.error('Error updating product:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
+
 // File upload route
 app.post('/api/products', verifyToken, upload.single('image'), async (req, res) => {
   const { name, description, price, affiliateLink, brand } = req.body;
