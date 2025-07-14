@@ -222,11 +222,10 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
       return res.status(400).json({ message: 'Image is required' });
     }
 
+    // Parse price as number
     const price = typeof rawPrice === 'number'
-      ? `₹${rawPrice}`
-      : String(rawPrice).trim().startsWith('₹')
-        ? String(rawPrice).trim()
-        : `₹${String(rawPrice).trim()}`;
+      ? rawPrice
+      : Number(String(rawPrice).replace(/[^\d.]/g, ''));
 
     const product = new Product({
       name,
