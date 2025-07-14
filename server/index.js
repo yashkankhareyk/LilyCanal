@@ -212,8 +212,8 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/products', verifyToken, upload.single('image'), async (req, res) => {
   try {
-    const { name, description, price, affiliateLink, brand } = req.body;
-    if (!name || !price) {
+    const { name, description, affiliateLink, brand, price: rawPrice } = req.body;
+    if (!name || !rawPrice) {
       return res.status(400).json({ message: 'Name and price are required' });
     }
 
@@ -221,6 +221,12 @@ app.post('/api/products', verifyToken, upload.single('image'), async (req, res) 
     if (!imageUrl) {
       return res.status(400).json({ message: 'Image is required' });
     }
+
+    const price = typeof rawPrice === 'number'
+      ? `₹${rawPrice}`
+      : String(rawPrice).trim().startsWith('₹')
+        ? String(rawPrice).trim()
+        : `₹${String(rawPrice).trim()}`;
 
     const product = new Product({
       name,
@@ -261,22 +267,26 @@ app.delete('/api/products/:id', verifyToken, async (req, res) => {
 });
 
 // File upload route
-app.post('/api/upload', verifyToken, upload.single('image'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
-    }
-    res.json({ 
-      imageUrl: req.file.path, 
-      cloudinaryId: req.file.filename 
-    });
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: error.message
-    });
-  }
+app.post('/api/products', verifyToken, upload.single('image'), async (req, res) => {
+  const { name, description, price, affiliateLink, brand } = req.body;
+  if (!name || !price) return res.status(400).json({ message:'Name & price required' });
+
+  // normalize to string
+  const normalizedPrice = typeof price === 'number'
+    ? `₹${price}`
+    : String(price).trim().startsWith('₹')
+      ? String(price).trim()
+      : `₹${String(price).trim()}`;
+
+  const product = new Product({
+    name, description,
+    price: normalizedPrice,
+    imageUrl: req.file?.path || req.body.imageUrl,
+    cloudinaryId: req.file?.filename||'',
+    affiliateLink, brand
+  });
+  await product.save();
+  res.status(201).json(product);
 });
 
 // Error handling middleware

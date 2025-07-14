@@ -12,6 +12,11 @@ interface Product {
   brand?: string;
 }
 
+function fmtPrice(p: string | number) {
+  if (typeof p === 'number') return `₹${p}`;
+  return p.startsWith('₹') ? p : `₹${p}`;
+}
+
 interface ProductCardProps {
   product: Product;
 }
@@ -51,7 +56,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-gray-900">
-            ₹{product.price}
+            {fmtPrice(product.price)}
           </span>
           
           <div className="flex items-center text-sm text-gray-500 group-hover:text-gray-700 transition-colors">

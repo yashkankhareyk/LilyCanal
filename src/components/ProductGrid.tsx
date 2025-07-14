@@ -6,7 +6,7 @@ interface Product {
   _id: string;
   name: string;
   description: string;
-  price: string; // '₹1,299'
+  price: string | number; // '₹1,299'
   imageUrl: string;
   cloudinaryId?: string;
   affiliateLink: string;
@@ -66,12 +66,13 @@ const ProductGrid: React.FC = () => {
     setFilteredProducts(updatedProducts);
   };
 
-  const extractPrice = (price: string | number | undefined): number => {
+  const extractPrice = (price: unknown): number => {
     if (typeof price === 'number') return price;
     if (typeof price === 'string') {
-      const numeric = price.replace(/[^\d]/g, '');
-      return numeric ? parseInt(numeric, 10) : 0;
+      const num = price.replace(/[^\d]/g, '');
+      return num ? parseInt(num, 10) : 0;
     }
+    console.warn('Unexpected price type in extractPrice:', price);
     return 0;
   };
   

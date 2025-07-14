@@ -9,7 +9,7 @@ const api = axios.create({
 });
 
 
-// Add a request interceptor to include auth token for authenticated requests
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('adminToken');
@@ -23,28 +23,27 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle common errors
+
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // Handle common errors here
+
     if (error.response) {
-      // Server responded with an error status code
+
       console.error('Response error:', error.response.status, error.response.data);
-      
-      // Handle authentication errors
+
       if (error.response.status === 401) {
-        // Redirect to login page if unauthorized
+
         localStorage.removeItem('adminToken');
         window.location.href = '/admin';
       }
     } else if (error.request) {
-      // Request was made but no response received
+
       console.error('Request error:', error.request);
     } else {
-      // Something else caused the error
+
       console.error('Error:', error.message);
     }
     
