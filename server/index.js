@@ -47,7 +47,9 @@ const allowedOrigins = [
   'https://lily-canal.vercel.app',
   'https://lily-canal-git-main-yashkankhareyks-projects.vercel.app',
   'https://lily-canal-hv1bp68p6-yashkankhareyks-projects.vercel.app',
-  'https://lily-canal-yashkankhareyks-projects.vercel.app'
+  'https://lily-canal-yashkankhareyks-projects.vercel.app',
+  'https://lilycanal.com',
+  'https://www.lilycanal.com'
 ];
 
 app.set('trust proxy', 1);
